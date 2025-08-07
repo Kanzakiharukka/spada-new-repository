@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "472811334281",
+    "project_id": "spada-app-new",
+    "storage_bucket": "spada-app-new.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:472811334281:android:842797b82d09e14a29f458",
+        "android_client_info": {
+          "package_name": "com.example.spada_app_new"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoXaygbvzF6gc_FtHyt6XzasdGqnlJi4I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
