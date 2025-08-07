@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'feed_screen.dart';
+import 'group_clan_screen.dart';
+import 'user_profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -7,33 +10,54 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home S.P.A.D.A'),
+        title: const Text('S.P.A.D.A - Início'),
         centerTitle: true,
       ),
       backgroundColor: Colors.black,
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Bem-vindo!',
-              style: TextStyle(fontSize: 24, color: Colors.white),
-            ),
-            const SizedBox(height: 20),
-
-            // Botão para ir ao perfil
-            ElevatedButton.icon(
+            ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pushNamed('/perfil');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FeedScreen()),
+                );
               },
-              icon: const Icon(Icons.person),
-              label: const Text('Ver Perfil'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
+              child: const Text('Acessar Feed'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GroupClaScreen()),
+                );
+              },
+              child: const Text('Ver Clã'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const UserProfileScreen()),
+                );
+              },
+              child: const Text('Perfil do Usuário'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                // Reinicia a HomeScreen (pode ser usado como refresh)
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                );
+              },
+              child: const Text('Atualizar Início'),
             ),
           ],
         ),

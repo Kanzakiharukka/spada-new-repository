@@ -15,6 +15,10 @@ dependencies:
   js: ^0.6.7 # <- ESSENCIAL para corrigir o erro do firebase_auth_web
   flutterfire_ui: ^0.4.3+20
   cupertino_icons: ^1.0.8
+  image_picker: ^1.1.0
+  firebase_storage: ^11.5.5
+
+
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -11,66 +14,109 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _nomeRealController = TextEditingController();
+  final _nomeClanController = TextEditingController();
+  final _dataNascimentoController = TextEditingController();
+  final _whatsappController = TextEditingController();
 
+  File? _imagemSelecionada;
   bool _isLoading = false;
   String? _errorMessage;
 
-  Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _selecionarImagem() async {
+    final picker = ImagePicker();
+    final imagem = await picker.pickImage(source: ImageSource.gallery);
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Criação do usuário no Auth
-      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      final user = credential.user;
-
-      if (user != null) {
-         // Registro no Firestore
-        await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).set({
-          'uid': user.uid,
-          'email': user.email,
-          'tipo': 'membro', // pode futuramente ser "instrutor", "admin" etc.
-          'data_cadastro': FieldValue.serverTimestamp(),
-           // Campos adicionais futuros como 'nome', 'clã', 'nível', etc.  
-        });
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cadastro realizado com sucesso!')),
-      );
-
-      // Opcional: navegar para outra tela
-      // Navigator.pushReplacementNamed(context, '/home');
-
-    } on FirebaseAuthException catch (e) {
+    if (imagem != null) {
       setState(() {
-        _errorMessage = e.message;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Erro inesperado: ${e.toString()}';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
+        _imagemSelecionada = File(imagem.path);
       });
     }
   }
+
+Future<void> _register() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  if (_passwordController.text != _confirmPasswordController.text) {
+    setState(() {
+      _errorMessage = 'As senhas não coincidem';
+    });
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    final user = credential.user;
+    String fotoUrl = '';
+
+    if (_imagemSelecionada != null) {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('fotos_perfil')
+          .child('${user!.uid}.jpg');
+
+      final uploadTask = await storageRef.putFile(_imagemSelecionada!);
+      fotoUrl = await uploadTask.ref.getDownloadURL();
+    }
+
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).set({
+        'uid': user.uid,
+        'email': user.email,
+        'nome_real': _nomeRealController.text.trim(),
+        'clan': _nomeClanController.text.trim(),
+        'data_nascimento': _dataNascimentoController.text.trim(),
+        'whatsapp': _whatsappController.text.trim(),
+        'foto_url': fotoUrl,
+        'tipo': 'membro',
+        'data_cadastro': FieldValue.serverTimestamp(),
+      });
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+    );
+
+    Navigator.pushReplacementNamed(context, '/login');
+
+  } on FirebaseAuthException catch (e) {
+    setState(() {
+      _errorMessage = e.message;
+    });
+  } catch (e) {
+    setState(() {
+      _errorMessage = 'Erro inesperado: ${e.toString()}';
+    });
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
+
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _nomeRealController.dispose();
+    _nomeClanController.dispose();
+    _dataNascimentoController.dispose();
+    _whatsappController.dispose();
     super.dispose();
   }
 
@@ -84,7 +130,6 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Form(
             key: _formKey,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
                   'Cadastrar no SPADA',
@@ -96,61 +141,74 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Email
-                TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    filled: true,
-                    fillColor: Colors.white10,
-                    labelStyle: TextStyle(color: Colors.white),
-                    border: OutlineInputBorder(),
-                  ),
-                  style: const TextStyle(color: Colors.white),
+                _buildTextField('Nome Real', _nomeRealController),
+                _buildTextField('Nome do Clã', _nomeClanController),
+                _buildTextField(
+                  'Data de Nascimento (dd/mm/aaaa)',
+                  _dataNascimentoController,
                   validator: (value) {
-                    if (value == null || !value.contains('@')) {
-                      return 'Digite um email válido';
-                    }
+                    if (value == null || value.isEmpty) return 'Campo obrigatório';
+                    final regex = RegExp(r'^\d{2}/\d{2}/\d{4}$');
+                    if (!regex.hasMatch(value)) return 'Formato inválido';
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
-
-                // Senha
-
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Senha',
-                    filled: true,
-                    fillColor: Colors.white10,
-                    labelStyle: TextStyle(color: Colors.white),
-                    border: OutlineInputBorder(),
-                  ),
-                  style: const TextStyle(color: Colors.white),
+                _buildTextField(
+                  'WhatsApp (somente números, com DDD)',
+                  _whatsappController,
+                  keyboardType: TextInputType.number,
                   validator: (value) {
-                    if (value == null || value.length < 6) {
-                      return 'A senha precisa ter no mínimo 6 caracteres';
-                    }
+                    if (value == null || value.isEmpty) return 'Campo obrigatório';
+                    if (!RegExp(r'^\d{11}$').hasMatch(value)) return 'Número inválido';
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
 
-                    // Erro
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: _selecionarImagem,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white10,
+                      border: Border.all(color: Colors.white38),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.image, color: Colors.white),
+                        const SizedBox(width: 10),
+                        Text(
+                          _imagemSelecionada == null
+                              ? 'Selecionar Foto'
+                              : 'Foto Selecionada!',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                _buildTextField('Email', _emailController, isEmail: true),
+                _buildTextField('Senha', _passwordController, isPassword: true),
+                _buildTextField('Confirmar Senha', _confirmPasswordController, isPassword: true),
+
                 if (_errorMessage != null)
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ),
-                const SizedBox(height: 16),
 
-                // Botão de cadastro
+                const SizedBox(height: 24),
                 _isLoading
                     ? const CircularProgressIndicator()
                     : ElevatedButton(
-                         style: ElevatedButton.styleFrom(
+                        style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white10,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
@@ -162,6 +220,45 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    String label,
+    TextEditingController controller, {
+    bool isPassword = false,
+    bool isEmail = false,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        controller: controller,
+        obscureText: isPassword,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.white10,
+          labelStyle: const TextStyle(color: Colors.white),
+          border: const OutlineInputBorder(),
+        ),
+        style: const TextStyle(color: Colors.white),
+        validator: validator ??
+            (value) {
+              if (value == null || value.isEmpty) {
+                return 'Preencha o campo';
+              }
+              if (isEmail && !value.contains('@')) {
+                return 'Digite um email válido';
+              }
+              if (isPassword && value.length < 6) {
+                return 'Senha muito curta';
+              }
+              return null;
+            },
       ),
     );
   }
