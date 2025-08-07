@@ -7,6 +7,12 @@ import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/user_profile_screen.dart'; 
+import 'screens/group_clan_screen.dart';
+import 'screens/feed_screen.dart';
+
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +37,12 @@ class SpadaApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/cadastro': (context) => const AuthScreen(),
         '/home': (context) => const HomeScreen(),
+        '/perfil': (context) => const UserProfileScreen(),
+        '/clan': (context) => const GroupClaScreen(),
+        '/feed': (context) => const FeedScreen(),
+
+
+
       },
     );
   }
