@@ -6,14 +6,7 @@ import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/auth_screen.dart';
-
-
-void testarFirestore() async {
-  await FirebaseFirestore.instance.collection('teste').add({
-    'mensagem': 'Conexão bem-sucedida com o Firestore!',
-    'timestamp': Timestamp.now(),
-  });
-}
+import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,11 +25,12 @@ class SpadaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'S.P.A.D.A',
       theme: ThemeData.dark(),
-      initialRoute: '/',
+      initialRoute: '/',  // Inicializa direto na tela de splash
       routes: {
         '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/cadastro': (context) => const AuthScreen(),
+        '/home': (context) => const HomeScreen(),
       },
     );
   }

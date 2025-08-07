@@ -25,17 +25,26 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      print('Validação do formulário falhou');
+      return;
+    }
 
     try {
       if (isLogin) {
         await auth.signInWithEmailAndPassword(email: email, password: password);
-        // Navegar para próxima tela
+        print('Login bem-sucedido');
       } else {
         await auth.createUserWithEmailAndPassword(email: email, password: password);
-        // Criar dados no Firestore se necessário
+        print('Cadastro bem-sucedido');
       }
+
+      // Navegar para home após sucesso
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed('/home');
     } catch (e) {
+      print('Erro na autenticação: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Erro: ${e.toString()}")),
       );
@@ -98,8 +107,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       child: Text(isLogin ? 'Entrar' : 'Cadastrar'),
                     ),
