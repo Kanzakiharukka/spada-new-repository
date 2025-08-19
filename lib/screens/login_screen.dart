@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/local_db.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -9,45 +9,26 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool isLogin = true;
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final auth = FirebaseAuth.instance;
   final _formKey = GlobalKey<FormState>();
-
-  void toggleForm() {
-    setState(() {
-      isLogin = !isLogin;
-    });
-  }
+  String? _errorMessage;
 
   Future<void> authenticate() async {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
-    if (!_formKey.currentState!.validate()) {
-      print('Validação do formulário falhou');
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    try {
-      if (isLogin) {
-        await auth.signInWithEmailAndPassword(email: email, password: password);
-        print('Login bem-sucedido');
-      } else {
-        await auth.createUserWithEmailAndPassword(email: email, password: password);
-        print('Cadastro bem-sucedido');
-      }
+    final user = await LocalDB.getUser(email, password);
 
-      // Navegar para home após sucesso
+    if (user != null) {
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed('/home');
-    } catch (e) {
-      print('Erro na autenticação: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erro: ${e.toString()}")),
-      );
+    } else {
+      setState(() {
+        _errorMessage = 'Email ou senha incorretos';
+      });
     }
   }
 
@@ -68,9 +49,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      isLogin ? 'Entrar no S.P.A.D.A' : 'Cadastrar-se no S.P.A.D.A',
-                      style: const TextStyle(fontSize: 24, color: Colors.white),
+                    const Text(
+                      'Entrar no S.P.A.D.A',
+                      style: TextStyle(fontSize: 24, color: Colors.white),
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -101,6 +82,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       validator: (value) =>
                           value != null && value.length >= 6 ? null : 'Mínimo 6 caracteres',
                     ),
+                    const SizedBox(height: 20),
+                    if (_errorMessage != null)
+                      Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     const SizedBox(height: 30),
                     ElevatedButton(
                       onPressed: authenticate,
@@ -112,16 +99,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: Text(isLogin ? 'Entrar' : 'Cadastrar'),
+                      child: const Text('Entrar'),
                     ),
-                    const SizedBox(height: 10),
-                    TextButton(
-                      onPressed: toggleForm,
-                      child: Text(
-                        isLogin ? 'Criar uma conta' : 'Já tem uma conta? Entrar',
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                    )
                   ],
                 ),
               ),

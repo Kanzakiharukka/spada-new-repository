@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+
+import '../services/local_db.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -38,75 +37,50 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-Future<void> _register() async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  if (_passwordController.text != _confirmPasswordController.text) {
-    setState(() {
-      _errorMessage = 'As senhas não coincidem';
-    });
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
-
-  try {
-    final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
-
-    final user = credential.user;
-    String fotoUrl = '';
-
-    if (_imagemSelecionada != null) {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('fotos_perfil')
-          .child('${user!.uid}.jpg');
-
-      final uploadTask = await storageRef.putFile(_imagemSelecionada!);
-      fotoUrl = await uploadTask.ref.getDownloadURL();
+    if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() {
+        _errorMessage = 'As senhas não coincidem';
+      });
+      return;
     }
 
-    if (user != null) {
-      await FirebaseFirestore.instance.collection('usuarios').doc(user.uid).set({
-        'uid': user.uid,
-        'email': user.email,
-        'nome_real': _nomeRealController.text.trim(),
-        'clan': _nomeClanController.text.trim(),
-        'data_nascimento': _dataNascimentoController.text.trim(),
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final newUser = {
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text.trim(),
+        'name': _nomeRealController.text.trim(),
+        'clanName': _nomeClanController.text.trim(),
+        'birthDate': _dataNascimentoController.text.trim(),
         'whatsapp': _whatsappController.text.trim(),
-        'foto_url': fotoUrl,
-        'tipo': 'membro',
-        'data_cadastro': FieldValue.serverTimestamp(),
+        'photoPath': _imagemSelecionada?.path ?? '',
+      };
+
+      await LocalDB.insertUser(newUser);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cadastro realizado com sucesso!')),
+      );
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/login');
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Erro inesperado: ${e.toString()}';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cadastro realizado com sucesso!')),
-    );
-
-    Navigator.pushReplacementNamed(context, '/login');
-
-  } on FirebaseAuthException catch (e) {
-    setState(() {
-      _errorMessage = e.message;
-    });
-  } catch (e) {
-    setState(() {
-      _errorMessage = 'Erro inesperado: ${e.toString()}';
-    });
-  } finally {
-    setState(() {
-      _isLoading = false;
-    });
   }
-}
-
 
   @override
   void dispose() {
